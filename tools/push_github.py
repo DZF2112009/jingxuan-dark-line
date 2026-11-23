@@ -77,12 +77,19 @@ def main():
     ap.add_argument("--private", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--root", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ap.add_argument("--files", nargs="*", help="只提交这些相对路径（增量更新，其余文件保持不动）")
     args = ap.parse_args()
 
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
     files = collect(args.root)
+    if args.files:
+        keep = {p.replace("\\", "/") for p in args.files}
+        files = [f for f in files if f[0] in keep]
+        missing = keep - {f[0] for f in files}
+        if missing:
+            raise SystemExit("这些路径在项目里找不到：%s" % ", ".join(sorted(missing)))
     total = sum(os.path.getsize(f) for _, f in files)
     print("[1/4] 待上传 %d 个文件，%.1f MB" % (len(files), total / 1048576.0))
     for rel, full in files:
